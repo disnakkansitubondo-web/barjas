@@ -2206,6 +2206,9 @@
             document.getElementById('jenisBantuan').addEventListener('change', updateSatuanBantuan);
             document.getElementById('printFromPreviewBtn').addEventListener('click', () => window.print());
             document.getElementById('v-pills-logout-tab').addEventListener('click', logout);
+
+            // --- REVISI: Listener untuk backup otomatis saat menutup/merefresh halaman ---
+            window.addEventListener('beforeunload', autoBackupData);
         }
         
         function fillYearDropdowns() {
@@ -2330,6 +2333,9 @@
         }
         
         function logout() {
+            // --- REVISI: Panggil fungsi backup otomatis saat tombol logout diklik ---
+            autoBackupData();
+            
             if (confirm('Apakah Anda yakin ingin keluar?')) {
                 document.getElementById('appContent').style.display = 'none';
                 document.getElementById('securityCode').value = '';
@@ -2949,6 +2955,31 @@
         }
 
         // --- BACKUP, RESTORE, RESET ---
+
+        // --- REVISI: Fungsi baru untuk backup otomatis ---
+        function autoBackupData() {
+            // Fungsi ini berjalan tanpa notifikasi ke pengguna agar tidak mengganggu.
+            if (appData.length === 0) {
+                return; // Jangan backup jika tidak ada data.
+            }
+
+            const timestamp = new Date().toISOString().slice(0, 10); // Format YYYY-MM-DD
+            // Membuat nama file sesuai permintaan: [nama aplikasi] - auto-backup-[tanggal]
+            const filename = `${appSettings.appName} - auto-backup-${timestamp}`;
+            const dataToBackup = { appData, appSettings, generatedCodes };
+            
+            // Menggunakan metode enkripsi yang sama dengan backup manual (btoa) untuk konsistensi.
+            const dataStr = btoa(unescape(encodeURIComponent(JSON.stringify(dataToBackup))));
+
+            // Menggunakan fungsi helper yang sudah ada untuk men-download file.
+            downloadFile(dataStr, 'application/json', `${filename}.json`);
+            
+            // Perbarui tanggal backup terakhir di pengaturan, meskipun tidak ditampilkan notifikasinya.
+            appSettings.lastBackupDate = new Date().toLocaleDateString('id-ID');
+            saveSettings();
+            applySettingsToUI();
+        }
+
         function backupData() {
             if (appData.length === 0) return showNotification('Tidak ada data untuk dibackup.', 'warning');
             
